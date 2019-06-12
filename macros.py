@@ -166,7 +166,6 @@ RTA_LENGTH = lambda length: RTA_ALIGN(sizeof(rtattr) + length)
 #define RTA_DATA(rta)   ((void*)(((char*)(rta)) + RTA_LENGTH(0)))
 '''
 RTA_DATA = lambda rta, attrlen: string_at(addressof(rta) + RTA_LENGTH(0), size=attrlen)
-#RTA_DATA = lambda rta, attrlen: cast(addressof(rta) + RTA_LENGTH(0), POINTER(c_char_p)).contents
 
 '''
 #define RTA_PAYLOAD(rta) ((int)((rta)->rta_len) - RTA_LENGTH(0))
@@ -242,5 +241,4 @@ RTNH_SPACE = lambda length: RTNH_ALIGN(RTNH_LENGTH(length))
 '''
 def RTNH_DATA(rtnh):
 	return cast(addressof(rtnh) + RTNH_LENGTH(0), POINTER(rtattr)).contents
-	#return string_at(addressof(rtnh) + RTNH_LENGTH(0), size=length)
 

@@ -16,41 +16,45 @@ BUFFSIZE = 65535
 MAXLEN = 1000
 
 
-def parse_rtattrs(rta, rtl):
+def parse_rtattr(rta, rtl):
 	
 	tb = []
 
 	while RTA_OK(rta, rtl):
 
 		if rta.rta_type == RTA_MULTIPATH:
-
-			nh = Unpack(rtnexthop, RTA_DATA(rta, rtl))
-			nh_len = RTA_PAYLOAD(rta);
-
-			nh_tb = []
-			while True:
-				if nh_len < sizeof(rtnexthop):
-					break
-				if nh.rtnh_len > nh_len:
-					break
-
-				if nh.rtnh_len > sizeof(rtnexthop):
-					result = parse_rtattrs(RTNH_DATA(nh), nh.rtnh_len - sizeof(rtnexthop))
-					LOG.debug("nexthop: %r", nh)
-					LOG.debug("nexthop attributes: %r", result)
-					nh_tb.append((nh, result))
-
-				nh_len -= NLMSG_ALIGN(nh.rtnh_len)
-				nh = RTNH_NEXT(nh)
-
+			nh_tb = parse_rta_multipath(rta, rtl)
 			tb.append((rta, nh_tb))
-
 		else:
 			attrlen = RTA_PAYLOAD(rta)
 			attrdata = RTA_DATA(rta, attrlen)
 			tb.append((rta, attrdata))
 
 		rta, rtl = RTA_NEXT(rta, rtl)
+
+	return tb
+
+
+def parse_rta_multipath(rta, rtl):
+
+	nh = Unpack(rtnexthop, RTA_DATA(rta, rtl))
+	nh_len = RTA_PAYLOAD(rta);
+
+	tb = []
+	while True:
+		LOG.debug("struct rtnexthop: (%r)", nh)
+
+		if nh_len < sizeof(rtnexthop):
+			break
+		if nh.rtnh_len > nh_len:
+			break
+
+		if nh.rtnh_len > sizeof(rtnexthop):
+			result = parse_rtattr(RTNH_DATA(nh), nh.rtnh_len - sizeof(rtnexthop))
+			tb.append((nh, result))
+
+		nh_len -= NLMSG_ALIGN(nh.rtnh_len)
+		nh = RTNH_NEXT(nh)
 
 	return tb
 
@@ -95,7 +99,7 @@ def process_netlink_mesage(data):
 		else:
 			break
 
-		tb = parse_rtattrs(rta, rtl)
+		tb = parse_rtattr(rta, rtl)
 
 		LOG.debug("List of attributes:")
 		for attr, v in tb:
