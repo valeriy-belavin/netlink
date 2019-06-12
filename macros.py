@@ -62,6 +62,15 @@ class ifinfomsg(Structure, Base):
 	]
 
 
+class rtnexthop(Structure, Base):
+	_fields_ = [
+		('rtnh_len', c_uint16),
+		('rtnh_flags', c_ubyte),
+		('rtnh_hops', c_ubyte),
+		('rtnh_ifindex', c_int),
+	]
+
+
 def Pack(ctype_instance):
 	buf = string_at(byref(ctype_instance), sizeof(ctype_instance))
 	return buf
@@ -157,6 +166,7 @@ RTA_LENGTH = lambda length: RTA_ALIGN(sizeof(rtattr) + length)
 #define RTA_DATA(rta)   ((void*)(((char*)(rta)) + RTA_LENGTH(0)))
 '''
 RTA_DATA = lambda rta, attrlen: string_at(addressof(rta) + RTA_LENGTH(0), size=attrlen)
+#RTA_DATA = lambda rta, attrlen: cast(addressof(rta) + RTA_LENGTH(0), POINTER(c_char_p)).contents
 
 '''
 #define RTA_PAYLOAD(rta) ((int)((rta)->rta_len) - RTA_LENGTH(0))
@@ -192,3 +202,45 @@ IFLA_RTA = lambda r: cast(addressof(r) + NLMSG_ALIGN(sizeof(ifinfomsg)), POINTER
 #define IFLA_PAYLOAD(n) NLMSG_PAYLOAD(n,sizeof(struct ifinfomsg))
 '''
 IFLA_PAYLOAD = lambda n: NLMSG_PAYLOAD(n, sizeof(ifinfomsg))
+
+#
+# Macros to handle hexthops
+#
+
+RTNH_ALIGNTO = 4
+
+'''
+#define RTNH_ALIGN(len) ( ((len)+RTNH_ALIGNTO-1) & ~(RTNH_ALIGNTO-1) )
+'''
+RTNH_ALIGN = lambda len: (len + RTNH_ALIGNTO - 1) & ~(RTNH_ALIGNTO - 1)
+
+'''
+#define RTNH_OK(rtnh,len) ((rtnh)->rtnh_len >= sizeof(struct rtnexthop) && \
+			   ((int)(rtnh)->rtnh_len) <= (len))
+'''
+RTNH_OK = lambda rtnh, length: ((rtnh.rtnh_len >= sizeof(rtnexthop)) and
+			   (rtnh.rtnh_len <= length))
+
+'''
+#define RTNH_NEXT(rtnh)	((struct rtnexthop*)(((char*)(rtnh)) + RTNH_ALIGN((rtnh)->rtnh_len)))
+'''
+def RTNH_NEXT(rtnh):
+	return cast(addressof(rtnh) + RTNH_ALIGN(rtnh.rtnh_len), POINTER(rtnexthop)).contents
+
+'''
+#define RTNH_LENGTH(len) (RTNH_ALIGN(sizeof(struct rtnexthop)) + (len))
+'''
+RTNH_LENGTH = lambda length: RTNH_ALIGN(sizeof(rtnexthop)) + length
+
+'''
+#define RTNH_SPACE(len)	RTNH_ALIGN(RTNH_LENGTH(len))
+'''
+RTNH_SPACE = lambda length: RTNH_ALIGN(RTNH_LENGTH(length))
+
+'''
+#define RTNH_DATA(rtnh)   ((struct rtattr*)(((char*)(rtnh)) + RTNH_LENGTH(0)))
+'''
+def RTNH_DATA(rtnh):
+	return cast(addressof(rtnh) + RTNH_LENGTH(0), POINTER(rtattr)).contents
+	#return string_at(addressof(rtnh) + RTNH_LENGTH(0), size=length)
+

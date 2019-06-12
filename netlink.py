@@ -229,6 +229,15 @@ def netlink_decode(command, family, nla_type, nla_data):
 	elif name in ["IFLA_ADDRESS", "IFLA_BROADCAST"]:
 		data = ":".join(["{:02x}".format(x) for x in struct.unpack('=6B', nla_data)])
 
+	elif name in ["RTA_MULTIPATH"]:
+		data = []
+		for nexthop, nexthop_attrs in nla_data:
+			values = {}
+			for rta, v in nexthop_attrs:
+				rta_name, value = netlink_decode(command, socket.AF_INET, rta.rta_type, v)
+				values[rta_name] = value
+			data.append((nexthop, values))
+
 	else:
 		data = nla_data
 

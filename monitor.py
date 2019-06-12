@@ -22,9 +22,33 @@ def parse_rtattrs(rta, rtl):
 
 	while RTA_OK(rta, rtl):
 
-		attrlen = RTA_PAYLOAD(rta)
-		attrdata = RTA_DATA(rta, attrlen)
-		tb.append((rta, attrdata))
+		if rta.rta_type == RTA_MULTIPATH:
+
+			nh = Unpack(rtnexthop, RTA_DATA(rta, rtl))
+			nh_len = RTA_PAYLOAD(rta);
+
+			nh_tb = []
+			while True:
+				if nh_len < sizeof(rtnexthop):
+					break
+				if nh.rtnh_len > nh_len:
+					break
+
+				if nh.rtnh_len > sizeof(rtnexthop):
+					result = parse_rtattrs(RTNH_DATA(nh), nh.rtnh_len - sizeof(rtnexthop))
+					LOG.debug("nexthop: %r", nh)
+					LOG.debug("nexthop attributes: %r", result)
+					nh_tb.append((nh, result))
+
+				nh_len -= NLMSG_ALIGN(nh.rtnh_len)
+				nh = RTNH_NEXT(nh)
+
+			tb.append((rta, nh_tb))
+
+		else:
+			attrlen = RTA_PAYLOAD(rta)
+			attrdata = RTA_DATA(rta, attrlen)
+			tb.append((rta, attrdata))
 
 		rta, rtl = RTA_NEXT(rta, rtl)
 
