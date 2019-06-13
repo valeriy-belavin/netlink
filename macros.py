@@ -7,7 +7,7 @@ class Base(object):
 	def __repr__(self):
 		data = []
 		for name, _ in self._fields_:
-			data.append("{}={} ".format(name, getattr(self, name)))
+			data.append("{}={}, ".format(name, getattr(self, name)))
 		return "".join(data)
 
 
@@ -79,9 +79,11 @@ def Pack(ctype_instance):
 def Unpack(ctype, buf):
 	cstring = create_string_buffer(buf)
 	ctype_instance = cast(pointer(cstring), POINTER(ctype)).contents
-	return ctype_instance	
+	return ctype_instance
 
-
+#
+# Macros to handle Netlink message (include/uapi/linux/netlink.h)
+#
 NLMSG_ALIGNTO = 4
 
 '''
@@ -133,7 +135,9 @@ def NLMSG_OK(nlh, length):
 def NLMSG_PAYLOAD(nlh, length):
 	return nlh.nlmsg_len - NLMSG_SPACE(length)
 
-
+#
+# Macros to handle rtattributes (/include/uapi/linux/rtnetlink.h)
+#
 RTA_ALIGNTO	= 4
 
 RTA_ALIGN = lambda length: (length + RTA_ALIGNTO - 1) & ~(RTA_ALIGNTO - 1)
@@ -182,6 +186,11 @@ RTM_RTA = lambda r: cast(addressof(r) + NLMSG_ALIGN(sizeof(rtmsg)), POINTER(rtat
 '''
 RTM_PAYLOAD = lambda nlh: NLMSG_PAYLOAD(nlh, sizeof(rtmsg))
 
+
+#
+# Macros to handle if_addrs (include/uapi/linux/if_addr.h)
+#
+
 '''
 #define IFA_RTA(r)  ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
 '''
@@ -192,6 +201,9 @@ IFA_RTA = lambda r: cast(addressof(r) + NLMSG_ALIGN(sizeof(ifaddrmsg)), POINTER(
 '''
 IFA_PAYLOAD = lambda n: NLMSG_PAYLOAD(n, sizeof(ifaddrmsg))
 
+#
+# Macros to handle if_link (include/uapi/linux/if_link.h)
+#
 '''
 #define IFLA_RTA(r)  ((struct rtattr*)(((char*)(r)) + NLMSG_ALIGN(sizeof(struct ifinfomsg))))
 '''
@@ -203,7 +215,7 @@ IFLA_RTA = lambda r: cast(addressof(r) + NLMSG_ALIGN(sizeof(ifinfomsg)), POINTER
 IFLA_PAYLOAD = lambda n: NLMSG_PAYLOAD(n, sizeof(ifinfomsg))
 
 #
-# Macros to handle hexthops
+# Macros to handle hexthops (include/uapi/linux/rtnetlink.h)
 #
 
 RTNH_ALIGNTO = 4

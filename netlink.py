@@ -166,7 +166,7 @@ def get_netlink_constant(value, prefix):
 
 
 def get_netlink_command(nlmsg):
-	""" Return netlink event name by nlmsg_type """
+	""" Return netlink event name by type """
 	return get_netlink_constant(nlmsg.nlmsg_type, 'RTM_')
 
 

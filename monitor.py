@@ -16,8 +16,31 @@ BUFFSIZE = 65535
 MAXLEN = 1000
 
 
+def parse_rta_multipath(rta, rtl):
+
+	nh = Unpack(rtnexthop, RTA_DATA(rta, rtl))
+	nh_len = RTA_PAYLOAD(rta);
+
+	tb = []
+	while True:
+		if nh_len < sizeof(rtnexthop):
+			break
+		if nh.rtnh_len > nh_len:
+			break
+
+		nh_attrs = []
+		if nh.rtnh_len > sizeof(rtnexthop):
+			nh_attrs = parse_rtattr(RTNH_DATA(nh), nh.rtnh_len - sizeof(rtnexthop))
+
+		tb.append((nh, nh_attrs))
+		nh_len -= NLMSG_ALIGN(nh.rtnh_len)
+		nh = RTNH_NEXT(nh)
+
+	return tb
+
+
 def parse_rtattr(rta, rtl):
-	
+
 	tb = []
 
 	while RTA_OK(rta, rtl):
@@ -31,30 +54,6 @@ def parse_rtattr(rta, rtl):
 			tb.append((rta, attrdata))
 
 		rta, rtl = RTA_NEXT(rta, rtl)
-
-	return tb
-
-
-def parse_rta_multipath(rta, rtl):
-
-	nh = Unpack(rtnexthop, RTA_DATA(rta, rtl))
-	nh_len = RTA_PAYLOAD(rta);
-
-	tb = []
-	while True:
-		LOG.debug("struct rtnexthop: (%r)", nh)
-
-		if nh_len < sizeof(rtnexthop):
-			break
-		if nh.rtnh_len > nh_len:
-			break
-
-		if nh.rtnh_len > sizeof(rtnexthop):
-			result = parse_rtattr(RTNH_DATA(nh), nh.rtnh_len - sizeof(rtnexthop))
-			tb.append((nh, result))
-
-		nh_len -= NLMSG_ALIGN(nh.rtnh_len)
-		nh = RTNH_NEXT(nh)
 
 	return tb
 
@@ -74,11 +73,11 @@ def process_netlink_mesage(data):
 		command = get_netlink_command(nlh)
 		LOG.debug("Command: %s", command)
 		LOG.debug("struct nlmsg: (%r)", nlh)
-		
+
 		if nlh.nlmsg_type in [RTM_NEWROUTE, RTM_DELROUTE]:
 			nldata = Unpack(rtmsg, NLMSG_DATA(nlh))
 			LOG.debug("struct rtmsg: (%r)", nldata)
-			
+
 			rta = RTM_RTA(nldata)
 			rtl = RTM_PAYLOAD(nlh)
 
@@ -95,7 +94,7 @@ def process_netlink_mesage(data):
 
 			rta = IFA_RTA(nldata)
 			rtl = IFA_PAYLOAD(nlh)
-		
+
 		else:
 			break
 
@@ -184,6 +183,6 @@ def main():
 
 
 if __name__ == "__main__":
-	
+
 	main()
 
