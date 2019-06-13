@@ -108,7 +108,7 @@ RTA_PAD = 24
 #
 # Macros to handle rtattributes (/include/uapi/linux/rtnetlink.h)
 #
-RTA_ALIGNTO	= 4
+RTA_ALIGNTO = 4
 
 RTA_ALIGN = lambda length: (length + RTA_ALIGNTO - 1) & ~(RTA_ALIGNTO - 1)
 
@@ -242,7 +242,9 @@ IFA_RTA = lambda r: cast(addressof(r) + NLMSG_ALIGN(sizeof(ifaddrmsg)), POINTER(
 
 IFA_PAYLOAD = lambda n: NLMSG_PAYLOAD(n, sizeof(ifaddrmsg))
 
-
+#
+# Helper functions for netlink message parsing
+#
 def get_netlink_constant(value, prefix):
 	""" Return netlink constant name by value and netlink command prefix """
 	thismodule = sys.modules[__name__]
