@@ -98,10 +98,14 @@ def process_netlink_mesage(data):
 
 		tb = parse_rtattr(rta, rtl)
 
+		rtattrs = {}
 		LOG.debug("List of attributes:")
 		for attr, v in tb:
 			name, value = netlink_decode(command, socket.AF_INET, attr.rta_type, v)
 			LOG.debug("%s (%d): %r", name, attr.rta_type, value)
+			rtattrs[name] = value
+
+		LOG.debug("rtattrs: %s", rtattrs)
 
 		nlh, length = NLMSG_NEXT(nlh, length)
 

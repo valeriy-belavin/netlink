@@ -108,9 +108,9 @@ RTA_PAD = 24
 #
 # Macros to handle rtattributes (/include/uapi/linux/rtnetlink.h)
 #
-RTA_ALIGNTO = 4
+_RTA_ALIGNTO_ = 4
 
-RTA_ALIGN = lambda length: (length + RTA_ALIGNTO - 1) & ~(RTA_ALIGNTO - 1)
+RTA_ALIGN = lambda length: (length + _RTA_ALIGNTO_ - 1) & ~(_RTA_ALIGNTO_ - 1)
 
 def RTA_OK(rta, length):
 	return (length >= sizeof(rtattr) and
