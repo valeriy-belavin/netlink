@@ -106,7 +106,6 @@ def process_netlink_mesage(data):
 			rtattrs[name] = value
 
 		LOG.debug("rtattrs: %s", rtattrs)
-
 		nlh, length = NLMSG_NEXT(nlh, length)
 
 
@@ -178,7 +177,7 @@ def main():
 
 	while True:
 		try:
-			time.sleep(1)
+			netlink_monitor.join(.1)
 		except KeyboardInterrupt:
 			netlink_monitor.terminate()
 			break
