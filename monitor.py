@@ -3,7 +3,6 @@ import time
 import threading
 
 from collections import deque
-from macros import *
 from netlink import *
 
 import logging
@@ -44,7 +43,6 @@ def parse_rtattr(rta, rtl):
 	tb = []
 
 	while RTA_OK(rta, rtl):
-
 		if rta.rta_type == RTA_MULTIPATH:
 			nh_tb = parse_rta_multipath(rta, rtl)
 			tb.append((rta, nh_tb))

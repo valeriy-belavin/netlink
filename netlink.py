@@ -1,3 +1,5 @@
+from cstruct import *
+
 import sys
 import struct
 import socket
@@ -22,6 +24,33 @@ NLM_F_DUMP = 0x300
 NLMSG_NOOP = 1
 NLMSG_ERROR = 2
 NLMSG_DONE = 3
+
+#
+# Macros to handle Netlink message (include/uapi/linux/netlink.h)
+#
+NLMSG_ALIGNTO = 4
+
+NLMSG_ALIGN = lambda length: (length + NLMSG_ALIGNTO - 1) & ~(NLMSG_ALIGNTO - 1)
+
+NLMSG_HDRLEN = NLMSG_ALIGN(sizeof(nlmsghdr))
+
+NLMSG_LENGTH = lambda length: length + NLMSG_HDRLEN
+
+NLMSG_SPACE = lambda length: NLMSG_ALIGN(NLMSG_LENGTH(length))
+
+NLMSG_DATA = lambda nlh: string_at(addressof(nlh) + NLMSG_LENGTH(0), size=nlh.nlmsg_len)
+
+def NLMSG_NEXT(nlh, length):
+	length -= NLMSG_ALIGN(nlh.nlmsg_len)
+	return cast(addressof(nlh) + NLMSG_ALIGN(nlh.nlmsg_len), POINTER(nlmsghdr)).contents, length
+
+def NLMSG_OK(nlh, length):
+	return (length >= sizeof(nlh) and
+			nlh.nlmsg_len >= sizeof(nlh) and
+			nlh.nlmsg_len <= length)
+
+def NLMSG_PAYLOAD(nlh, length):
+	return nlh.nlmsg_len - NLMSG_SPACE(length)
 
 #
 # rtnetlink constants (include/uapi/linux/rtnetlink.h)
@@ -77,6 +106,53 @@ RTA_EXPIRES = 23
 RTA_PAD = 24
 
 #
+# Macros to handle rtattributes (/include/uapi/linux/rtnetlink.h)
+#
+RTA_ALIGNTO	= 4
+
+RTA_ALIGN = lambda length: (length + RTA_ALIGNTO - 1) & ~(RTA_ALIGNTO - 1)
+
+def RTA_OK(rta, length):
+	return (length >= sizeof(rtattr) and
+			rta.rta_len >= sizeof(rtattr) and
+			rta.rta_len <= length)
+
+def RTA_NEXT(rta, attrlen):
+	attrlen -= RTA_ALIGN(rta.rta_len)
+	rta = cast(addressof(rta) + RTA_ALIGN(rta.rta_len), POINTER(rtattr)).contents
+	return rta, attrlen
+
+RTA_LENGTH = lambda length: RTA_ALIGN(sizeof(rtattr) + length)
+
+RTA_DATA = lambda rta, attrlen: string_at(addressof(rta) + RTA_LENGTH(0), size=attrlen)
+
+RTA_PAYLOAD = lambda rta: rta.rta_len - RTA_LENGTH(0)
+
+RTM_RTA = lambda r: cast(addressof(r) + NLMSG_ALIGN(sizeof(rtmsg)), POINTER(rtattr)).contents
+
+RTM_PAYLOAD = lambda nlh: NLMSG_PAYLOAD(nlh, sizeof(rtmsg))
+
+#
+# Macros to handle hexthops (include/uapi/linux/rtnetlink.h)
+#
+RTNH_ALIGNTO = 4
+
+RTNH_ALIGN = lambda len: (len + RTNH_ALIGNTO - 1) & ~(RTNH_ALIGNTO - 1)
+
+RTNH_OK = lambda rtnh, length: ((rtnh.rtnh_len >= sizeof(rtnexthop)) and
+			   (rtnh.rtnh_len <= length))
+
+def RTNH_NEXT(rtnh):
+	return cast(addressof(rtnh) + RTNH_ALIGN(rtnh.rtnh_len), POINTER(rtnexthop)).contents
+
+RTNH_LENGTH = lambda length: RTNH_ALIGN(sizeof(rtnexthop)) + length
+
+RTNH_SPACE = lambda length: RTNH_ALIGN(RTNH_LENGTH(length))
+
+def RTNH_DATA(rtnh):
+	return cast(addressof(rtnh) + RTNH_LENGTH(0), POINTER(rtattr)).contents
+
+#
 # Link flags (include/uapi/linux/if_link.h)
 #
 IFLA_UNSPEC = 0
@@ -123,6 +199,13 @@ IFLA_GSO_MAX_SEGS = 40
 IFLA_GSO_MAX_SIZE = 41
 
 #
+# Macros to handle if_link (include/uapi/linux/if_link.h)
+#
+IFLA_RTA = lambda r: cast(addressof(r) + NLMSG_ALIGN(sizeof(ifinfomsg)), POINTER(rtattr)).contents
+
+IFLA_PAYLOAD = lambda n: NLMSG_PAYLOAD(n, sizeof(ifinfomsg))
+
+#
 # Address flags (include/uapi/linux/if_addr.h)
 #
 IFA_UNSPEC = 0
@@ -152,9 +235,16 @@ IFA_F_NOPREFIXROUTE	= 0x200
 IFA_F_MCAUTOJOIN = 0x400
 IFA_F_STABLE_PRIVACY = 0x800
 
+#
+# Macros to handle if_addrs (include/uapi/linux/if_addr.h)
+#
+IFA_RTA = lambda r: cast(addressof(r) + NLMSG_ALIGN(sizeof(ifaddrmsg)), POINTER(rtattr)).contents
+
+IFA_PAYLOAD = lambda n: NLMSG_PAYLOAD(n, sizeof(ifaddrmsg))
+
 
 def get_netlink_constant(value, prefix):
-	""" Returns netlink constant name by value and prefix """
+	""" Return netlink constant name by value and netlink command prefix """
 	thismodule = sys.modules[__name__]
 	for name in dir(thismodule):
 		if (name.startswith(prefix) and
@@ -242,5 +332,4 @@ def netlink_decode(command, family, nla_type, nla_data):
 		data = nla_data
 
 	return name, data
-
 
