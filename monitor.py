@@ -61,6 +61,7 @@ def process_netlink_mesage(data):
 	nlh = Unpack(nlmsghdr, data)
 	length = nlh.nlmsg_len
 
+	result = []
 	while NLMSG_OK(nlh, length):
 		if nlh.nlmsg_type == NLMSG_DONE:
 			break
@@ -105,8 +106,11 @@ def process_netlink_mesage(data):
 			LOG.debug("%s (%d): %r", name, attr.rta_type, value)
 			rtattrs[name] = value
 
-		LOG.debug("rtattrs: %s", rtattrs)
+		result.append((command, rtattrs))
+
 		nlh, length = NLMSG_NEXT(nlh, length)
+
+	return result
 
 
 class Worker(threading.Thread):
@@ -128,7 +132,8 @@ class Worker(threading.Thread):
 			func, args = task[0], task[1:]
 
 			try:
-				func(*args)
+				result = func(*args)
+				LOG.info("Parsing result: %s", result)
 			except Exception as e:
 				LOG.error('Monitor got exception: %s' % e, exc_info=True)
 
